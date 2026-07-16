@@ -23,43 +23,8 @@ const generateAccessAndRefreshTokens = async(userId) =>{
         error.message
     )
 
-    }
-//  console.log("Generating Tokens");
-
-//     console.log("A");
-//     const user = await User.findById(userId);
-
-//     console.log("B");
-//     console.log("USER FOUND :", user);
-
-//     const accessToken = user.generateAccessToken();
-
-//     console.log("C");
-//     console.log("ACCESS TOKEN GENERATED");
-
-//     const refreshToken = user.generateRefreshToken();
-
-//     console.log("D");
-//     console.log("REFRESH TOKEN GENERATED");
-
-//     user.refreshToken = refreshToken;
-
-//     console.log("E");
-//     console.log("REFRESH TOKEN SAVED");
-
-//     await user.save({
-//         validateBeforeSave: false
-//     });
-
-//     console.log("F");
-//     console.log("USER SAVED SUCCESSFULLY");
-
-//     return {
-//         accessToken,
-//         refreshToken
-//     };
-}
-
+    
+}}
 
 const registerUser = asyncHandler( async (req, res) => {
     // get user details from frontend
@@ -130,7 +95,7 @@ const registerUser = asyncHandler( async (req, res) => {
         new ApiResponse(200, createdUser, "User registered Successfully")
     )
 
-} )
+})
 
 const loginUser = asyncHandler(async (req, res) =>{
     console.log("LOGIN USER CALLED");
@@ -345,7 +310,7 @@ const avatarUpdate = asyncHandler(async(req, res)=>{
         throw new ApiError(400, "Error while uploading image")
     }
 
-    await User.findByIdAndUpdate(req.user._id,
+    const user = await User.findByIdAndUpdate(req.user._id,
         {
             $set:{
                 avatar: avatar.url
@@ -376,7 +341,7 @@ const updateUserCoverImage = asyncHandler(async(req, res)=>{
         throw new ApiError(400, "Error while uploading image")
     }
 
-    await User.findByIdAndUpdate(req.user._id,
+    const user = await User.findByIdAndUpdate(req.user._id,
         {
             $set:{
                 coverImage: coverImage.url
@@ -392,7 +357,83 @@ const updateUserCoverImage = asyncHandler(async(req, res)=>{
             200, user, "Cover Image updated successfully"
         )
     )
-})
+ })
+
+ const getUserChannelProfile = asyncHandler(async(req, res) => {
+    const {username} = req.params
+
+    if(!username?.trim()){
+        throw new ApiError (400, "Username is missing")
+    }
+
+    User.find({})
+
+    const channel = await User.aggregate([
+        {
+            $match:{
+                username: username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "chanel",
+                as: "subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from: "subscriptions",
+                localField: "_id",
+                foreignField: "subscriber",
+                as: "subscribedTo"
+            }
+        },
+        {
+            $addFields: {
+                subscribersCount: {
+                    $size: "subscribers"
+                },
+                subscribeToCount:{
+                    $size: "subscribedTo"
+                },
+                isSubscribed: {
+                    $cond:{
+                        if:{
+                            $in: [req.user?._id, "$subscribers.subsrciber"]}, //$in checks inside an object and also checks inside an array
+                    then: true,
+                    else: false
+                }
+             }
+          }
+       },
+       { //This is for, which fields we have to sent 
+        $project: {
+            fullname: 1,
+            username: 1,
+            subscribersCount: 1,
+            subscribeToCount: 1,
+            avatar: 1,
+            coverImage: 1,
+            email: 1
+        }
+       }
+        
+    ])
+
+    if(!channel?.length){
+        throw new ApiError(400, "Channel does not exists")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(200, channel[0], "User channel fetched successfully ")
+    )
+ })
+
+
 export {
     registerUser,
     loginUser,
