@@ -3,6 +3,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
+import mongoose from "mongoose";
 import jwt from "jsonwebtoken";
 
 const generateAccessAndRefreshTokens = async(userId) =>{
@@ -55,7 +56,7 @@ const registerUser = asyncHandler( async (req, res) => {
     }
     //console.log(req.files);
 
-    const coverImageLocalPath = req.files?.avatar[0]?.path;
+    const avatarLocalPath  = req.files?.avatar[0]?.path;
     //const coverImageLocalPath = req.files?.coverImage[0]?.path;
 
     let coverImageLocalPath;
@@ -63,11 +64,11 @@ const registerUser = asyncHandler( async (req, res) => {
         coverImageLocalPath = req.files.coverImage[0].path
     }
     
-    if (!coverImageLocalPath) {
+    if (!avatarLocalPath ) {
         throw new ApiError(400, "Avatar file is required")
     }
 
-    const avatar = await uploadOnCloudinary(coverImageLocalPath)
+    const avatar = await uploadOnCloudinary(avatarLocalPath )
     const coverImage = await uploadOnCloudinary(coverImageLocalPath)
 
     if (!avatar) {
@@ -480,7 +481,7 @@ const updateUserCoverImage = asyncHandler(async(req, res)=>{
     ])
 
     return res
-    .res(200)
+    .status(200)
     .json(
         new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully")
     )
